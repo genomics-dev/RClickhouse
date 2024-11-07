@@ -9,6 +9,12 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+// apparently on Windows, in winspool.h, they have `#define SetPort SetPortA`,
+// breaking compilation
+#ifdef SetPort
+  #undef SetPort
+#endif
+
 using namespace Rcpp;
 using namespace clickhouse;
 
