@@ -170,6 +170,12 @@ void disconnect(XPtr<Client> conn) {
 
 // [[Rcpp::export]]
 XPtr<Result> select(XPtr<Client> conn, String query) {
+  // always reset the connection before executing a new query,
+  // as the connection may have dropped
+  // using conn->Ping() did not seem to work as that wouldn't
+  // pick up on the SSL connection having been closed.
+  conn->ResetConnection();
+
   Result *r = new Result(query);
   //TODO: async?
   conn->SelectCancelable(query, [&r] (const Block& block) {
