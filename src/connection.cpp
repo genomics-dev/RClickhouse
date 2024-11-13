@@ -121,6 +121,7 @@ SSL_CTX * prepareSSLContext(const std::string &ca_certs, const std::string &cert
 }
 
 
+//' @export
 // [[Rcpp::export]]
 XPtr<Client> connect(
     String host,
@@ -163,19 +164,15 @@ XPtr<Client> connect(
   return p;
 }
 
+//' @export
 // [[Rcpp::export]]
 void disconnect(XPtr<Client> conn) {
   conn.release();
 }
 
+//' @export
 // [[Rcpp::export]]
 XPtr<Result> select(XPtr<Client> conn, String query) {
-  // always reset the connection before executing a new query,
-  // as the connection may have dropped
-  // using conn->Ping() did not seem to work as that wouldn't
-  // pick up on the SSL connection having been closed.
-  conn->ResetConnection();
-
   Result *r = new Result(query);
   //TODO: async?
   conn->SelectCancelable(query, [&r] (const Block& block) {
@@ -530,6 +527,7 @@ void insert(XPtr<Client> conn, String tableName, DataFrame df) {
   conn->Insert(tableName, block);
 }
 
+//' @export
 // [[Rcpp::export]]
 bool validPtr(SEXP ptr) {
   return R_ExternalPtrAddr(ptr);

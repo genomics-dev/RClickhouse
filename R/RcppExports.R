@@ -29,14 +29,17 @@ resultTypes <- function(res) {
     .Call(`_RClickhouse_resultTypes`, res)
 }
 
+#' @export
 connect <- function(host, port, db, user, password, compression, use_ssl, ca_certs, certfile, keyfile) {
     .Call(`_RClickhouse_connect`, host, port, db, user, password, compression, use_ssl, ca_certs, certfile, keyfile)
 }
 
+#' @export
 disconnect <- function(conn) {
     invisible(.Call(`_RClickhouse_disconnect`, conn))
 }
 
+#' @export
 select <- function(conn, query) {
     .Call(`_RClickhouse_select`, conn, query)
 }
@@ -45,6 +48,7 @@ insert <- function(conn, tableName, df) {
     invisible(.Call(`_RClickhouse_insert`, conn, tableName, df))
 }
 
+#' @export
 validPtr <- function(ptr) {
     .Call(`_RClickhouse_validPtr`, ptr)
 }
