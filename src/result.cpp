@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include "clickhouse/columns/string.h"
+#include "clickhouse/columns/lowcardinality.h"
 #include "result.h"
   
 // helper function which emits an R warning without causing a longjmp
@@ -169,6 +170,21 @@ void convertEntries<ch::ColumnUUID, Rcpp::StringVector>(std::shared_ptr<const ch
       out[offset+j-start] = Rcpp::StringVector::get_na();
     } else {
       out[offset+j-start] = formatUUID(in->At(j));
+    }
+  }
+}
+
+template<>
+void convertEntries<ch::ColumnLowCardinality, Rcpp::StringVector>(std::shared_ptr<const ch::ColumnLowCardinality> in,
+    NullCol nullCol, Rcpp::StringVector &out, size_t offset, size_t start, size_t end) {
+  for(size_t j = start; j < end; j++) {
+    if(nullCol && nullCol->IsNull(j)) {
+      out[offset+j-start] = Rcpp::StringVector::get_na();
+    } else {
+      // Get the actual string value from the LowCardinality column
+      auto item = in->GetItem(j);
+      std::string value = std::string(item.get<std::string_view>());
+      out[offset+j-start] = value;
     }
   }
 }
@@ -377,6 +393,19 @@ std::unique_ptr<Converter> Result::buildConverter(std::string name, ch::TypeRef 
         }
 
         return std::unique_ptr<EnumConverter<ch::ColumnEnum16, int16_t, Rcpp::IntegerVector>>(new EnumConverter<ch::ColumnEnum16, int16_t, Rcpp::IntegerVector>(type, items));
+      }
+    case TC::LowCardinality:
+      {
+        // For now, we only support LowCardinality(String) and LowCardinality(FixedString)
+        // downcast to LowCardinalityType to access GetNestedType member
+        std::shared_ptr<class ch::LowCardinalityType> lowcard_t = std::static_pointer_cast<ch::LowCardinalityType>(type);
+        auto nested_type = lowcard_t->GetNestedType();
+        
+        if (nested_type->GetCode() == TC::String || nested_type->GetCode() == TC::FixedString) {
+          return std::unique_ptr<ScalarConverter<ch::ColumnLowCardinality, Rcpp::StringVector>>(new ScalarConverter<ch::ColumnLowCardinality, Rcpp::StringVector>);
+        } else {
+          throw std::invalid_argument("LowCardinality(" + nested_type->GetName() + ") is not yet supported");
+        }
       }
     default:
       throw std::invalid_argument("cannot read unsupported type: "+type->GetName());
